@@ -3,17 +3,24 @@ import { View } from "@tarojs/components";
 import Table from "taro3-table";
 import { useState, useEffect, useRef } from "react";
 import "./index.less";
-import { AtTabs, AtTabsPane, AtButton } from "taro-ui";
+import { AtTabs, AtTabsPane, AtButton, AtNoticebar } from "taro-ui";
 
 const Index = () => {
-  const [data, setData] = useState([]);
   const cacheData = useRef([]);
+
+  const [data, setData] = useState([]);
+  const [dbData, setDbData] = useState([]);
+  const [sizeData, setSizeData] = useState([]);
+  const [kkData, setKkData] = useState([]);
+
   const [loading, setLoading] = useState(false);
   const [current, setCurrent] = useState(0);
+
   const tabList = [
     { title: "低溢价转债前20" },
     { title: "双低转债前20" },
-    { title: "低规模前20" }
+    { title: "低规模前20" },
+    { title: "双低40-低规模前20" }
   ];
 
   const columns = [
@@ -61,27 +68,29 @@ const Index = () => {
     }
   ];
 
+  const fColumns = [
+    {
+      title: "名字",
+      dataIndex: "name"
+    },
+    {
+      title: "价格",
+      dataIndex: "price"
+    },
+    {
+      title: "双低",
+      dataIndex: "double_low"
+    },
+    {
+      title: "剩余市值",
+      dataIndex: "curr_iss_amt"
+    }
+  ];
+
   const handleClick = async value => {
     setCurrent(value);
-    if (value === 0) {
-      const result = cacheData.current.sort(
-        (a: any, b: any) => a.premium_rt - b.premium_rt
-      );
-      setData(result.slice(0, 20));
-    }
-    if (value === 1) {
-      const result = cacheData.current.sort(
-        (a: any, b: any) => a.double_low - b.double_low
-      );
-      setData(result.slice(0, 20));
-    }
-    if (value === 2) {
-      const result = cacheData.current.sort(
-        (a: any, b: any) => a.curr_iss_amt - b.curr_iss_amt
-      );
-      setData(result.slice(0, 20));
-    }
   };
+
   const fetchData = async () => {
     setCurrent(0);
     setLoading(true);
@@ -95,8 +104,23 @@ const Index = () => {
       method: "POST",
       header,
       success: res => {
-        setData(res.data.data.slice(0, 20));
         cacheData.current = res.data.data;
+        setData(res.data.data.slice(0, 20));
+        const result = cacheData.current.sort(
+          (a: any, b: any) => a.double_low - b.double_low
+        );
+        setDbData(result.slice(0, 20));
+        const lData = cacheData.current.sort(
+          (a: any, b: any) => a.curr_iss_amt - b.curr_iss_amt
+        );
+        setSizeData(lData.slice(0, 20));
+        const kData = cacheData.current.sort(
+          (a: any, b: any) => a.double_low - b.double_low
+        );
+        const fData = kData
+          .slice(0, 40)
+          .sort((a: any, b: any) => a.curr_iss_amt - b.curr_iss_amt);
+        setKkData(fData.slice(0, 20));
       },
       fail: () => {}
     });
@@ -118,15 +142,17 @@ const Index = () => {
         刷新数据
       </AtButton>
 
-      <AtTabs current={current} tabList={tabList} onClick={handleClick}>
+      <AtTabs current={current} tabList={tabList} onClick={handleClick} scroll>
         <AtTabsPane current={current} index={0}>
           <View style="padding: 20px 0px;background-color: #FAFBFC;text-align: center;">
+            <AtNoticebar>低溢价指标排序从小到大,取前20</AtNoticebar>
+
             <Table
               columns={columns}
               dataSource={data}
               loading={loading}
               style={{
-                margin: "0 auto",
+                margin: "10px auto",
                 width: "92vw"
               }}
               scroll={{
@@ -138,12 +164,13 @@ const Index = () => {
         </AtTabsPane>
         <AtTabsPane current={current} index={1}>
           <View style="padding: 20px 0px;background-color: #FAFBFC;text-align: center;">
+            <AtNoticebar>双低指标排序从小到大,取前20</AtNoticebar>
             <Table
               columns={columnsDb}
-              dataSource={data}
+              dataSource={dbData}
               loading={loading}
               style={{
-                margin: "0 auto",
+                margin: "10px auto",
                 width: "92vw"
               }}
               scroll={{
@@ -155,12 +182,35 @@ const Index = () => {
         </AtTabsPane>
         <AtTabsPane current={current} index={2}>
           <View style="padding: 20px 0px;background-color: #FAFBFC;text-align: center;">
+            <AtNoticebar>剩余规模指标排序从小到大,取前20</AtNoticebar>
+
             <Table
               columns={columnsSize}
-              dataSource={data}
+              dataSource={sizeData}
               loading={loading}
               style={{
-                margin: "0 auto",
+                margin: "10px auto",
+                width: "92vw"
+              }}
+              scroll={{
+                x: "100vw",
+                y: 400
+              }}
+            />
+          </View>
+        </AtTabsPane>
+        <AtTabsPane current={current} index={3}>
+          <View style="padding: 20px 0px;background-color: #FAFBFC;text-align: center;">
+            <AtNoticebar>
+              双低指标排序从小到大,取前40, 然后按照剩余规模指标取前20
+            </AtNoticebar>
+
+            <Table
+              columns={fColumns}
+              dataSource={kkData}
+              loading={loading}
+              style={{
+                margin: "10px auto",
                 width: "92vw"
               }}
               scroll={{
